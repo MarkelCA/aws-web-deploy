@@ -2,6 +2,7 @@ locals {
   project-name = "prueba-web"
   # vpc_id       = "vpc-419f2938"
   # subnet_id    = "subnet-36bd5e4f"
+  red_casa = provider::dotenv::get_by_key("HOME_IP", ".env")
 
   vpc_cidr           = "10.0.0.0/16"
   availability_zones = slice(data.aws_availability_zones.available.names, 0, 3)
@@ -23,14 +24,36 @@ resource "aws_security_group" "ingress-ofi-ssh" {
   vpc_id = module.vpc.vpc_id
 
 
+  // SSH ingress rule
   ingress {
     cidr_blocks = [
-      "***/32" # Red casa
+      "${local.red_casa}/32" # Red casa
     ]
     from_port = 22
     to_port   = 22
     protocol  = "tcp"
   }
+
+  // HTTP ingress rule
+  ingress {
+    cidr_blocks = [
+      "${local.red_casa}/32" # Red casa
+    ]
+    from_port = 80
+    to_port   = 80
+    protocol  = "tcp"
+  }
+
+  // HTTPS ingress rule
+  ingress {
+    cidr_blocks = [
+      "${local.red_casa}/32" # Red casa
+    ]
+    from_port = 443
+    to_port   = 443
+    protocol  = "tcp"
+  }
+
 
   // Terraform removes the default rule
   egress {
