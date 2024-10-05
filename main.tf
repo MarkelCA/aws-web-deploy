@@ -1,8 +1,6 @@
 locals {
   project-name = "prueba-web"
-  # vpc_id       = "vpc-419f2938"
-  # subnet_id    = "subnet-36bd5e4f"
-  red_casa = provider::dotenv::get_by_key("HOME_IP", ".env")
+  red_casa     = provider::dotenv::get_by_key("HOME_IP", ".env")
 
   vpc_cidr           = "10.0.0.0/16"
   availability_zones = slice(data.aws_availability_zones.available.names, 0, 3)
@@ -27,7 +25,8 @@ resource "aws_security_group" "ingress-ofi-ssh" {
   // SSH ingress rule
   ingress {
     cidr_blocks = [
-      "${local.red_casa}/32" # Red casa
+      "${local.red_casa}/32", # Red casa
+      "0.0.0.0/0"
     ]
     from_port = 22
     to_port   = 22
@@ -37,7 +36,8 @@ resource "aws_security_group" "ingress-ofi-ssh" {
   // HTTP ingress rule
   ingress {
     cidr_blocks = [
-      "${local.red_casa}/32" # Red casa
+      "${local.red_casa}/32", # Red casa
+      "0.0.0.0/0"
     ]
     from_port = 80
     to_port   = 80
