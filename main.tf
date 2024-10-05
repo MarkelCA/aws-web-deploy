@@ -1,6 +1,6 @@
 locals {
   project-name = "prueba-web"
-  vpc_id       = "vpc-419f2938"
+  # vpc_id       = "vpc-419f2938"
   # subnet_id    = "subnet-36bd5e4f"
 
   vpc_cidr           = "10.0.0.0/16"
@@ -20,7 +20,7 @@ resource "aws_key_pair" "generated_key" {
 
 resource "aws_security_group" "ingress-ofi-ssh" {
   name   = "${local.project-name}-sg"
-  vpc_id = local.vpc_id
+  vpc_id = module.vpc.vpc_id
 
 
   ingress {
@@ -51,8 +51,6 @@ resource "aws_instance" "runner-instance" {
   subnet_id                   = module.vpc.public_subnets[0]
   associate_public_ip_address = true
   security_groups             = ["${aws_security_group.ingress-ofi-ssh.id}"]
-
-  user_data = file("./scripts/install-gh-runner.sh")
 
   tags = {
     Name = "${local.project-name}-instance"
