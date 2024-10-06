@@ -8,6 +8,6 @@ Batteries included template to deploy web servers in AWS. Leverages Terraform an
 
 ## Build
 The build process is divided between the provision step and the configuration step, described in the `terraform` and `ansible` folders respectively. Go to these folders and follow the instructions.
-- terraform
-- ansible
+- [terraform](https://github.com/MarkelCA/web-deploy-scaffold/tree/master/terraform)
+- [ansible](https://github.com/MarkelCA/web-deploy-scaffold/tree/master/ansible)
 
