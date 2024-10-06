@@ -1,23 +1,25 @@
 locals {
   project-name = "prueba-web"
-  red_casa     = provider::dotenv::get_by_key("HOME_IP", ".env")
+  # home_ip      = provider::dotenv::get_by_key("HOME_IP", ".env")
 
   vpc_cidr           = "10.0.0.0/16"
   availability_zones = slice(data.aws_availability_zones.available.names, 0, 3)
 }
 
+module "vpc" {
+  source          = "terraform-aws-modules/vpc/aws"
+  version         = "~> 5.0"
+  name            = "${local.project-name}-vpc"
+  cidr            = local.vpc_cidr
+  azs             = local.availability_zones
+  private_subnets = [for k, v in local.availability_zones : cidrsubnet(local.vpc_cidr, 4, k)]
+  public_subnets  = [for k, v in local.availability_zones : cidrsubnet(local.vpc_cidr, 8, k + 48)]
 
-resource "tls_private_key" "example" {
-  algorithm = "RSA"
-  rsa_bits  = 4096
+  enable_nat_gateway = true
+  single_nat_gateway = true
 }
 
-resource "aws_key_pair" "generated_key" {
-  key_name   = var.key_name
-  public_key = tls_private_key.example.public_key_openssh
-}
-
-resource "aws_security_group" "ingress-ofi-ssh" {
+resource "aws_security_group" "ingress_ofi_ssh" {
   name   = "${local.project-name}-sg"
   vpc_id = module.vpc.vpc_id
 
@@ -25,7 +27,7 @@ resource "aws_security_group" "ingress-ofi-ssh" {
   // SSH ingress rule
   ingress {
     cidr_blocks = [
-      "${local.red_casa}/32", # Red casa
+      # "${local.home_ip}/32",
       "0.0.0.0/0"
     ]
     from_port = 22
@@ -36,7 +38,7 @@ resource "aws_security_group" "ingress-ofi-ssh" {
   // HTTP ingress rule
   ingress {
     cidr_blocks = [
-      "${local.red_casa}/32", # Red casa
+      # "${local.home_ip}/32",
       "0.0.0.0/0"
     ]
     from_port = 80
@@ -47,7 +49,7 @@ resource "aws_security_group" "ingress-ofi-ssh" {
   // HTTPS ingress rule
   ingress {
     cidr_blocks = [
-      "${local.red_casa}/32" # Red casa
+      # "${local.home_ip}/32"
     ]
     from_port = 443
     to_port   = 443
@@ -65,30 +67,51 @@ resource "aws_security_group" "ingress-ofi-ssh" {
 }
 
 
+resource "tls_private_key" "instance_key" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
 
-resource "aws_instance" "runner-instance" {
+resource "aws_key_pair" "generated_key" {
+  key_name   = var.key_name
+  public_key = tls_private_key.instance_key.public_key_openssh
+}
+
+resource "aws_instance" "runner_instance" {
   ami           = data.aws_ami.ubuntu.id
   instance_type = "t2.micro"
   key_name      = aws_key_pair.generated_key.key_name
   # subnet_id                   = local.subnet_id
   subnet_id                   = module.vpc.public_subnets[0]
   associate_public_ip_address = true
-  security_groups             = ["${aws_security_group.ingress-ofi-ssh.id}"]
+  security_groups             = ["${aws_security_group.ingress_ofi_ssh.id}"]
 
   tags = {
     Name = "${local.project-name}-instance"
   }
 }
 
-module "vpc" {
-  source          = "terraform-aws-modules/vpc/aws"
-  version         = "~> 5.0"
-  name            = "${local.project-name}-vpc"
-  cidr            = local.vpc_cidr
-  azs             = local.availability_zones
-  private_subnets = [for k, v in local.availability_zones : cidrsubnet(local.vpc_cidr, 4, k)]
-  public_subnets  = [for k, v in local.availability_zones : cidrsubnet(local.vpc_cidr, 8, k + 48)]
-
-  enable_nat_gateway = true
-  single_nat_gateway = true
+# Add the Hosted Zone for the domain
+resource "aws_route53_zone" "markelca_com" {
+  name = "markelca.com"
 }
+
+# Create an A record to point to your instance's public IP
+resource "aws_route53_record" "markelca_com_record" {
+  zone_id = aws_route53_zone.markelca_com.zone_id
+  name    = "markelca.com" # Replace with "www.markelca.com" if using a subdomain
+  type    = "A"
+  ttl     = 300
+  records = [aws_instance.runner_instance.public_ip]
+}
+
+# Optional: If you're using a CNAME for a subdomain like "www"
+resource "aws_route53_record" "www" {
+  zone_id = aws_route53_zone.markelca_com.zone_id
+  name    = "www.markelca.com"
+  type    = "CNAME"
+  ttl     = 300
+  records = ["markelca.com"]
+}
+
+

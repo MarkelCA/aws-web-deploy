@@ -1,5 +1,5 @@
 output "private_key" {
-  value     = tls_private_key.example.private_key_pem
+  value     = tls_private_key.instance_key.private_key_pem
   sensitive = true
 }
 
@@ -13,5 +13,5 @@ output "create-ssh-key-cmd" {
 
 output "ssh-into-machine" {
   description = "Opens SSH connection to the machine"
-  value       = "ssh ubuntu@${aws_instance.runner-instance.public_ip} -i ~/.ssh/${local.project-name}"
+  value       = "ssh ubuntu@${aws_instance.runner_instance.public_ip} -i ~/.ssh/${local.project-name}"
 }
