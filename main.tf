@@ -1,7 +1,5 @@
 locals {
-  project-name = "prueba-web"
   # home_ip      = provider::dotenv::get_by_key("HOME_IP", ".env")
-
   vpc_cidr           = "10.0.0.0/16"
   availability_zones = slice(data.aws_availability_zones.available.names, 0, 3)
 }
@@ -9,7 +7,7 @@ locals {
 module "vpc" {
   source          = "terraform-aws-modules/vpc/aws"
   version         = "~> 5.0"
-  name            = "${local.project-name}-vpc"
+  name            = "${var.project_name}-vpc"
   cidr            = local.vpc_cidr
   azs             = local.availability_zones
   private_subnets = [for k, v in local.availability_zones : cidrsubnet(local.vpc_cidr, 4, k)]
@@ -19,8 +17,8 @@ module "vpc" {
   single_nat_gateway = true
 }
 
-resource "aws_security_group" "ingress_ofi_ssh" {
-  name   = "${local.project-name}-sg"
+resource "aws_security_group" "ingress_ssh" {
+  name   = "${var.project_name}-sg"
   vpc_id = module.vpc.vpc_id
 
 
@@ -49,7 +47,8 @@ resource "aws_security_group" "ingress_ofi_ssh" {
   // HTTPS ingress rule
   ingress {
     cidr_blocks = [
-      # "${local.home_ip}/32"
+      # "${local.home_ip}/32",
+      "0.0.0.0/0"
     ]
     from_port = 443
     to_port   = 443
@@ -84,22 +83,22 @@ resource "aws_instance" "runner_instance" {
   # subnet_id                   = local.subnet_id
   subnet_id                   = module.vpc.public_subnets[0]
   associate_public_ip_address = true
-  security_groups             = ["${aws_security_group.ingress_ofi_ssh.id}"]
+  security_groups             = ["${aws_security_group.ingress_ssh.id}"]
 
   tags = {
-    Name = "${local.project-name}-instance"
+    Name = "${var.project_name}-instance"
   }
 }
 
 # Add the Hosted Zone for the domain
-resource "aws_route53_zone" "markelca_com" {
-  name = "markelca.com"
+resource "aws_route53_zone" "domain" {
+  name = var.domain
 }
 
 # Create an A record to point to your instance's public IP
-resource "aws_route53_record" "markelca_com_record" {
-  zone_id = aws_route53_zone.markelca_com.zone_id
-  name    = "markelca.com" # Replace with "www.markelca.com" if using a subdomain
+resource "aws_route53_record" "domain_record" {
+  zone_id = aws_route53_zone.domain.zone_id
+  name    = var.domain
   type    = "A"
   ttl     = 300
   records = [aws_instance.runner_instance.public_ip]
@@ -107,11 +106,11 @@ resource "aws_route53_record" "markelca_com_record" {
 
 # Optional: If you're using a CNAME for a subdomain like "www"
 resource "aws_route53_record" "www" {
-  zone_id = aws_route53_zone.markelca_com.zone_id
-  name    = "www.markelca.com"
+  zone_id = aws_route53_zone.domain.zone_id
+  name    = "www.${var.domain}"
   type    = "CNAME"
   ttl     = 300
-  records = ["markelca.com"]
+  records = [var.domain]
 }
 
 
