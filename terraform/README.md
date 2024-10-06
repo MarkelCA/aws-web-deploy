@@ -21,4 +21,4 @@ Now that the DNS is deployed on AWS you have to add those Name Servers in your D
 
 ---
 
-If you finished these steps now you can go to the [ansible]() folder to configure your web server.
+If you finished these steps now you can go to the [ansible](https://github.com/MarkelCA/web-deploy-scaffold/tree/master/ansible) folder to configure your web server.
