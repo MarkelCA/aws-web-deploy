@@ -1,5 +1,5 @@
 # terraform-aws-ecs
-Terraform template to deploy web servers in EC2. Comes with preconfigured SSH key access and DNS.
+Batteries included template to deploy web servers in AWS. Leverages Terraform and Ansible to provision and configure the infrastructure. Deploys an Nginx web server in EC2, also configuring the DNS server with Route53 and SSH key access.
 
 ## Dependencies
 - [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
